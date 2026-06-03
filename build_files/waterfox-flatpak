@@ -1,0 +1,21 @@
+if ! flatpak override --user --show net.waterfox.waterfox | grep -q "/run/user/$UID/psd"; then
+    flatpak override --user net.waterfox.waterfox --filesystem=/run/user/$UID/psd
+fi
+
+if [[ -d "$HOME"/.var/app/net.waterfox.waterfox/.waterfox ]]; then
+    index=0
+    PSNAME="$browser"
+    while read -r profileItem; do
+        if [[ $(echo "$profileItem" | cut -c1) = "/" ]]; then
+            # path is not relative
+            DIRArr[$index]="$profileItem"
+        else
+            # we need to append the default path to give a
+            # fully qualified path
+            DIRArr[$index]="$HOME/.var/app/net.waterfox.waterfox/.waterfox/$profileItem"
+        fi
+        (( index=index+1 ))
+    done < <(grep '[Pp]'ath= "$HOME"/.var/app/net.waterfox.waterfox/.waterfox/profiles.ini | sed 's/[Pp]ath=//')
+fi
+
+check_suffix=1

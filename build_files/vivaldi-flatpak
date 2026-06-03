@@ -1,0 +1,6 @@
+if ! flatpak override --user --show com.vivaldi.Vivaldi | grep -q "/run/user/$UID/psd"; then
+    flatpak override --user com.vivaldi.Vivaldi --filesystem=/run/user/$UID/psd
+fi
+
+DIRArr[0]="$HOME/.var/app/com.vivaldi.Vivaldi/config/$browser"
+PSNAME="$browser"-bin

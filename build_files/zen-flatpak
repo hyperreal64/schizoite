@@ -1,0 +1,21 @@
+if ! flatpak override --user --show app.zen_browser.zen | grep -q "/run/user/$UID/psd"; then
+    flatpak override --user app.zen_browser.zen --filesystem=/run/user/$UID/psd
+fi
+
+if [[ -d "$HOME"/.var/app/app.zen_browser.zen/cache/zen ]]; then
+    index=0
+    PSNAME="$browser"
+    while read -r profileItem; do
+        if [[ $(echo "$profileItem" | cut -c1) = "/" ]]; then
+            # path is not relative
+            DIRArr[$index]="$profileItem"
+        else
+            # we need to append the default path to give a
+            # fully qualified path
+            DIRArr[$index]="$HOME/.var/app/app.zen_browser.zen/cache/zen/$profileItem"
+        fi
+        (( index=index+1 ))
+    done < <(grep '^[Pp]'ath= "$HOME"/.var/app/app.zen_browser.zen/.zen/profiles.ini | sed 's/^[Pp]ath=//')
+fi
+
+check_suffix=1
