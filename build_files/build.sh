@@ -4,21 +4,107 @@ set -ouex pipefail
 
 ### Install packages
 
-# Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
+dnf5 -y copr enable bigmenpixel/profile-sync-daemon
 
-# this installs a package from fedora repos
-dnf5 install -y tmux 
+dnf5 install -y \
+	atop \
+	profile-sync-daemon \
+	prometheus-node-exporter \
+	yakuake
 
-# Use a COPR Example:
-#
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
+dnf5 -y copr disable bigmenpixel/profile-sync-daemon
 
-#### Example for enabling a System Unit File
+### Setup profile-sync-daemon
 
-systemctl enable podman.socket
+#### waterfox-flatpak
+cat <<EOF >/usr/share/psd/browsers/waterfox-flatpak
+if ! flatpak override --user --show net.waterfox.waterfox | grep -q "/run/user/$UID/psd"; then
+    flatpak override --user net.waterfox.waterfox --filesystem=/run/user/$UID/psd
+fi
+
+if [[ -d "$HOME"/.var/app/net.waterfox.waterfox/.waterfox ]]; then
+    index=0
+    PSNAME="$browser"
+    while read -r profileItem; do
+        if [[ $(echo "$profileItem" | cut -c1) = "/" ]]; then
+            # path is not relative
+            DIRArr[$index]="$profileItem"
+        else
+            # we need to append the default path to give a
+            # fully qualified path
+            DIRArr[$index]="$HOME/.var/app/net.waterfox.waterfox/.waterfox/$profileItem"
+        fi
+        (( index=index+1 ))
+    done < <(grep '[Pp]'ath= "$HOME"/.var/app/net.waterfox.waterfox/.waterfox/profiles.ini | sed 's/[Pp]ath=//')
+fi
+
+check_suffix=1
+EOF
+
+#### firefox-flatpak
+cat <<EOF >/usr/share/psd/browsers/firefox-flatpak
+if ! flatpak override --user --show org.mozilla.firefox | grep -q "/run/user/$UID/psd"; then
+    flatpak override --user org.mozilla.firefox --filesystem=/run/user/$UID/psd
+fi
+
+if [[ -d "$HOME"/.var/app/org.mozilla.firefox/.mozilla/firefox ]]; then
+    index=0
+    PSNAME="$browser"
+    while read -r profileItem; do
+        if [[ $(echo "$profileItem" | cut -c1) = "/" ]]; then
+            # path is not relative
+            DIRArr[$index]="$profileItem"
+        else
+            # we need to append the default path to give a
+            # fully qualified path
+            DIRArr[$index]="$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox/$profileItem"
+        fi
+        (( index=index+1 ))
+    done < <(grep '[Pp]'ath= "$HOME"/.var/app/org.mozilla.firefox/.mozilla/firefox/profiles.ini | sed 's/[Pp]ath=//')
+fi
+
+check_suffix=1
+EOF
+
+#### vivaldi-flatpak
+cat <<EOF >/usr/share/psd/browsers/vivaldi-flatpak
+if ! flatpak override --user --show com.vivaldi.Vivaldi | grep -q "/run/user/$UID/psd"; then
+	flatpak override --user com.vivaldi.Vivaldi --filesystem=/run/user/$UID/psd
+fi
+
+DIRArr[0]="$HOME/.var/app/com.vivaldi.Vivaldi/config/$browser"
+PSNAME="$browser"-bin
+EOF
+
+#### zen-flatpak
+cat <<EOF >/usr/share/psd/browsers/zen-flatpak
+if ! flatpak override --user --show app.zen_browser.zen | grep -q "/run/user/$UID/psd"; then
+	flatpak override --user app.zen_browser.zen --filesystem=/run/user/$UID/psd
+fi
+
+if [[ -d "$HOME"/.var/app/app.zen_browser.zen/cache/zen ]]; then
+	index=0
+	PSNAME="$browser"
+	while read -r profileItem; do
+		if [[ $(echo "$profileItem" | cut -c1) = "/" ]]; then
+			# path is not relative
+			DIRArr[$index]="$profileItem"
+		else
+			# we need to append the default path to give a
+			# fully qualified path
+			DIRArr[$index]="$HOME/.var/app/app.zen_browser.zen/cache/zen/$profileItem"
+		fi
+		(( index=index+1 ))
+	done < <(grep '^[Pp]'ath= "$HOME"/.var/app/app.zen_browser.zen/.zen/profiles.ini | sed 's/^[Pp]ath=//')
+fi
+
+check_suffix=1
+EOF
+
+### systemd units
+
+systemctl enable atop.service
+systemctl enable atopacct.service
+systemctl enable atop-rotate.timer
+systemctl enable prometheus-node-exporter.service
+systemctl disable cups.service
