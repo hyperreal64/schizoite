@@ -7,6 +7,6 @@ Many thanks to the Universal Blue and Fedora Project developers for making this 
 ## Installation
 
 ```shell
-sudo bootc switch ghcr.io/hyperreal64/schizoite
+sudo bootc switch ghcr.io/hyperreal64/schizoite0
 sudo systemctl reboot
 ```
