@@ -14,10 +14,6 @@ dnf5 install -y \
 
 dnf5 -y copr disable bigmenpixel/profile-sync-daemon
 
-### Setup profile-sync-daemon
-
-cp -v firefox-flatpak vivaldi-flatpak waterfox-flatpak zen-flatpak /usr/share/psd/browsers/
-
 ### systemd units
 
 systemctl enable atop.service
